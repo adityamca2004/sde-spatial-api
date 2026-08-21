@@ -87,9 +87,4 @@ class SpatialRefSys(Base):
     srtext: Mapped[Optional[str]] = mapped_column(String(2048))
     proj4text: Mapped[Optional[str]] = mapped_column(String(2048))
 # Create an engine connected to the environment database
-import os
-from sqlalchemy import create_engine
-engine = create_engine(os.getenv("DATABASE_URL", "postgresql://postgres:postgres@localhost:5432/api_db"))
 
-# This forces the cloud server to auto-build any missing tables!
-Base.metadata.create_all(bind=engine)
