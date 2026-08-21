@@ -1,17 +1,21 @@
 from fastapi import FastAPI, Depends
-from sqlalchemy import create_engine, text
+from sqlalchemy import create_engine, text  # Ensure text is imported
 from sqlalchemy.orm import sessionmaker, Session
+from test import Books, ApiImportedData, IndiaOutline, Base  
 import json
 
 # Import your tracking classes from your test.py file
-from test import Books, ApiImportedData  
+
 
 app = FastAPI(title="SDE Spatial Database API")
 
 DATABASE_URL = "postgresql://postgres:postgres@localhost:5432/api_db"
 engine = create_engine(DATABASE_URL)
+with engine.connect() as conn:
+    conn.execute(text("CREATE EXTENSION IF NOT EXISTS postgis;"))
+    conn.commit()
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-
+Base.metadata.create_all(bind=engine)
 def get_db():
     db = SessionLocal()
     try:
