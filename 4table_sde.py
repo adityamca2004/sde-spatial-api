@@ -1,14 +1,17 @@
 from fastapi import FastAPI, Depends
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker, Session
+import os  # Added to read system settings
 
 # Import only your simple text models
 from test import Books, ApiImportedData  
 
 app = FastAPI(title="SDE Spatial Database API")
 
-# Render handles your database link automatically
-DATABASE_URL = "postgresql://postgres:postgres@localhost:5432/api_db"
+# FIXED: This reads your Render cloud database URL first, 
+# and only uses localhost as a backup fallback for your laptop testing!
+DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://postgres:postgres@localhost:5432/api_db")
+
 engine = create_engine(DATABASE_URL)
 
 # Safe raw SQL table creation block - No GeoAlchemy or permission issues!
