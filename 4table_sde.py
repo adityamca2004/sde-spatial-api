@@ -1,20 +1,17 @@
 from fastapi import FastAPI, Depends
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker, Session
-import os  # Added to read system settings
+import os
 
-# Import only your simple text models
+# Import your tracking classes from your test.py file
 from test import Books, ApiImportedData  
 
 app = FastAPI(title="SDE Spatial Database API")
 
-# FIXED: This reads your Render cloud database URL first, 
-# and only uses localhost as a backup fallback for your laptop testing!
 DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://postgres:postgres@localhost:5432/api_db")
-
 engine = create_engine(DATABASE_URL)
 
-# Safe raw SQL table creation block - No GeoAlchemy or permission issues!
+# Safe raw SQL table creation block
 with engine.connect() as conn:
     conn.execute(text("""
         CREATE TABLE IF NOT EXISTS books (
@@ -46,10 +43,22 @@ def get_db():
     finally:
         db.close()
 
+# 1. GET Endpoint - Fetch books
 @app.get("/books")
 def get_books(db: Session = Depends(get_db)):
     return db.query(Books).all()
 
+# 2. NEW: POST Endpoint - Add a book into your live cloud database
+@app.post("/books")
+def create_book(title: str, author: str, db: Session = Depends(get_db)):
+    """Inserts a brand new record into your live production table!"""
+    new_book = Books(title=title, author=author)
+    db.add(new_book)
+    db.commit()
+    db.refresh(new_book)
+    return new_book
+
+# 3. GET Endpoint - Fetch imported data
 @app.get("/imported-data")
 def get_imported_data(db: Session = Depends(get_db)):
     return db.query(ApiImportedData).all()
