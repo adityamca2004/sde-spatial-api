@@ -1,23 +1,40 @@
 from fastapi import FastAPI, Depends
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker, Session
-import json
 
-# Import your models along with the Base tracker class
-from test import Books, ApiImportedData, Base  
+# Import only your simple text models
+from test import Books, ApiImportedData  
 
 app = FastAPI(title="SDE Spatial Database API")
 
+# Render handles your database link automatically
 DATABASE_URL = "postgresql://postgres:postgres@localhost:5432/api_db"
 engine = create_engine(DATABASE_URL)
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
-# FIXED: This builds ONLY standard tables (Books, ApiImportedData) 
-# and skips the unprivileged spatial PostGIS layers!
-Base.metadata.create_all(bind=engine, tables=[
-    Base.metadata.tables['books'],
-    Base.metadata.tables['api_imported_data']
-])
+# Safe raw SQL table creation block - No GeoAlchemy or permission issues!
+with engine.connect() as conn:
+    conn.execute(text("""
+        CREATE TABLE IF NOT EXISTS books (
+            id SERIAL PRIMARY KEY,
+            title VARCHAR,
+            author VARCHAR
+        );
+    """))
+    conn.execute(text("""
+        CREATE TABLE IF NOT EXISTS api_imported_data (
+            external_id TEXT PRIMARY KEY,
+            imported_at TIMESTAMP DEFAULT NOW(),
+            updated_at TIMESTAMP DEFAULT NOW(),
+            srid BIGINT,
+            srtext TEXT,
+            auth_name TEXT,
+            auth_srid BIGINT,
+            proj4text TEXT
+        );
+    """))
+    conn.commit()
+
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 def get_db():
     db = SessionLocal()
